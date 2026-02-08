@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { deezerApi } from '../api/deezerApi'
 import { jukeboxApi } from '../api/jukeboxApi'
-import { useDebouncedValue } from '../utils/debounce'
 import { clampText, formatDuration } from '../utils/format'
 import { TrackCard } from '../components/TrackCard'
 import { Button } from '../components/ui/Button'
@@ -18,6 +17,7 @@ import rockHand from '../assets/rock-hand.png'
 const LIMIT_DEFAULT = 20
 const FIXED_TABLE_CODE = 'BAR'
 const AUTO_CLOSE_SUCCESS_MS = 3000
+const MOBILE_INITIAL_RESULTS = 6
 
 function normalizeTracks(payload) {
   const data = payload?.Data ?? payload?.data
@@ -30,12 +30,51 @@ export const ClientJukebox = () => {
 
   const [requestedBy, setRequestedBy] = useState('')
   const [q, setQ] = useState('')
-  const qDebounced = useDebouncedValue(q, 350)
+  const [submittedQ, setSubmittedQ] = useState('')
+  const searchInputRef = useRef(null)
+
+  // Mobile-only UI: limitar resultados y habilitar “Ver más”
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileShowAll, setMobileShowAll] = useState(false)
+
+  // Detectar “mobile” por breakpoint Tailwind (< sm = 640px)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const apply = () => setIsMobile(mq.matches)
+    apply()
+    if (mq.addEventListener) mq.addEventListener('change', apply)
+    else mq.addListener(apply)
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', apply)
+      else mq.removeListener(apply)
+    }
+  }, [])
 
   const [limit] = useState(LIMIT_DEFAULT)
   const [loading, setLoading] = useState(false)
   const [tracks, setTracks] = useState([])
   const [errorMsg, setErrorMsg] = useState('')
+
+  const handleSearch = () => {
+    const term = (q ?? '').trim()
+    setSubmittedQ(term)
+    // UX mobile: bajar el teclado para mostrar resultados
+    if (searchInputRef.current) searchInputRef.current.blur()
+  }
+
+  const handleClear = () => {
+    setQ('')
+    setSubmittedQ('')
+    setTracks([])
+    setErrorMsg('')
+    setLoading(false)
+  }
+
+  // Si cambia la búsqueda o llegan nuevos resultados, reinicia el “Ver más” en mobile
+  useEffect(() => {
+    if (!isMobile) return
+    setMobileShowAll(false)
+  }, [isMobile, submittedQ, tracks])
 
   const [selected, setSelected] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -46,7 +85,7 @@ export const ClientJukebox = () => {
   const [successMsg, setSuccessMsg] = useState('')
   const [modalErrorMsg, setModalErrorMsg] = useState('')
 
-  const canSearch = useMemo(() => qDebounced.trim().length >= 2, [qDebounced])
+  const canSearch = useMemo(() => submittedQ.trim().length >= 2, [submittedQ])
   const reqIdRef = useRef(0)
 
   const {
@@ -94,7 +133,7 @@ export const ClientJukebox = () => {
       setLoading(true)
       try {
         const res = await deezerApi.searchTracks({
-          q: qDebounced.trim(),
+          q: submittedQ.trim(),
           limit,
         })
         const list = normalizeTracks(res)
@@ -110,7 +149,7 @@ export const ClientJukebox = () => {
     }
 
     run()
-  }, [qDebounced, limit, canSearch])
+  }, [submittedQ, limit, canSearch])
 
   function openConfirm(track) {
     setSelected(track)
@@ -167,6 +206,13 @@ export const ClientJukebox = () => {
     }
   }
 
+  const hasMoreOnMobile = isMobile && tracks.length > MOBILE_INITIAL_RESULTS
+  const visibleTracks = useMemo(() => {
+    if (!isMobile) return tracks
+    if (mobileShowAll) return tracks
+    return tracks.slice(0, MOBILE_INITIAL_RESULTS)
+  }, [isMobile, mobileShowAll, tracks])
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Background glow */}
@@ -215,20 +261,47 @@ export const ClientJukebox = () => {
               {/* Buscar + Tip */}
               <div className="md:col-start-2 md:row-start-1 space-y-4">
                 <div className="rounded-[26px] bg-white/5 ring-1 ring-white/10 p-4 md:p-5">
-                  <div className="text-sm font-semibold tracking-wide text-white/90">
-                    BUSCAR
-                  </div>
+                  {' '}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="hidden text-sm font-semibold tracking-wide text-white/90">
+                      BUSCAR
+                    </div>
 
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleClear}
+                        variant="ghost"
+                        className="h-9 rounded-xl px-3 text-xs sm:text-sm"
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleSearch}
+                        className="h-9 rounded-xl px-3 text-xs sm:text-sm"
+                      >
+                        Buscar
+                      </Button>
+                    </div>
+                  </div>
                   <div className="mt-3 flex flex-col gap-3">
                     <div className="rounded-2xl bg-black/30 ring-1 ring-white/10 px-3 py-2">
                       <Input
+                        ref={searchInputRef}
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleSearch()
+                          }
+                        }}
                         placeholder="Metallica, Pantera, Slipknot…"
                       />
                     </div>
 
-                    <div className="rounded-2xl bg-black/20 ring-1 ring-white/10 px-3 py-2">
+                    <div className="hidden rounded-2xl bg-black/20 ring-1 ring-white/10 px-3 py-2">
                       <Input
                         value={requestedBy}
                         onChange={(e) => setRequestedBy(e.target.value)}
@@ -251,7 +324,7 @@ export const ClientJukebox = () => {
                     </span>
                     .
                   </div>
-                  <div className="mt-2 text-xs text-white/50 text-center">
+                  <div className="hidden mt-2 text-xs text-white/50 text-center">
                     El tiempo es aproximado. Depende de la duración de los
                     videos en fila.
                   </div>
@@ -298,7 +371,7 @@ export const ClientJukebox = () => {
                   ) : null}
 
                   <div className="mt-4 space-y-3">
-                    {tracks.map((t) => (
+                    {visibleTracks.map((t) => (
                       <TrackCard
                         key={t.DeezerTrackId}
                         track={t}
@@ -306,6 +379,18 @@ export const ClientJukebox = () => {
                       />
                     ))}
                   </div>
+
+                  {hasMoreOnMobile && !mobileShowAll ? (
+                    <div className="pt-3 md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setMobileShowAll(true)}
+                        className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold ring-1 ring-white/15 active:scale-[0.99]"
+                      >
+                        Ver más ({tracks.length - MOBILE_INITIAL_RESULTS} más)
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -351,7 +436,7 @@ export const ClientJukebox = () => {
                 <div className="rounded-[26px] bg-white/5 ring-1 ring-white/10 p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-semibold text-white tracking-wide">
-                      PRÓXIMAS CANCIONES
+                      CANCIONES EN FILA
                     </div>
                     <div className="text-xs text-white/50">
                       {upcoming?.length || 0}
@@ -368,7 +453,7 @@ export const ClientJukebox = () => {
                   !queueError &&
                   (!upcoming || upcoming.length === 0) ? (
                     <div className="mt-3 rounded-2xl bg-black/20 p-3 ring-1 ring-white/10 text-sm text-white/55">
-                      Aún no hay canciones en cola.
+                      Aún no hay canciones en lista.
                     </div>
                   ) : null}
 
