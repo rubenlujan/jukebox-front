@@ -485,7 +485,7 @@ export const HostPlayer = () => {
                   🎶 Canciones pedidas
                 </div>
                 <div className="text-xs text-white/45">
-                  {queueItems.length} en cola
+                  {queueItems.length} en la fila
                 </div>
               </div>
 
