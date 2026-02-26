@@ -18,8 +18,6 @@ export const HostPlayer = () => {
   const busyNextRef = useRef(false)
   const mountedRef = useRef(false)
   const playerReadyPromiseRef = useRef(null)
-  const pendingFallbackIdRef = useRef(null)
-  const lastYtErrorRef = useRef(null)
   const fallbackSkipRef = useRef(0)
   const fallbackListIdRef = useRef(null)
   const lastAutoQueueIdRef = useRef(null)
@@ -32,6 +30,11 @@ export const HostPlayer = () => {
   })
   const [lastError, setLastError] = useState('')
   const [forceFinishCurrent, setForceFinishCurrent] = useState(true)
+  const [showQueuePanel, setShowQueuePanel] = useState(false)
+  const queuePanelTimeoutRef = useRef(null)
+  const previousQueueLengthRef = useRef(0)
+  const [showError, setShowError] = useState(false)
+  const errorTimeoutRef = useRef(null)
 
   // UI listo: conecta aquí /queue luego
   const {
@@ -87,6 +90,44 @@ export const HostPlayer = () => {
     })
   }, [queueItems, status])
 
+  // ✅ Mostrar panel cuando hay cambios en la cola y ocultarlo después de 5 segundos
+  useEffect(() => {
+    if (queueItems.length > previousQueueLengthRef.current) {
+      // Se agregó una canción - mostrar el panel
+      setShowQueuePanel(true)
+
+      // Limpiar timeout anterior si existe
+      if (queuePanelTimeoutRef.current) {
+        clearTimeout(queuePanelTimeoutRef.current)
+      }
+
+      // Establecer nuevo timeout para ocultar después de 5 segundos
+      queuePanelTimeoutRef.current = setTimeout(() => {
+        setShowQueuePanel(false)
+      }, 5000)
+    }
+
+    previousQueueLengthRef.current = queueItems.length
+  }, [queueItems.length])
+
+  // ✅ Mostrar error durante 10 segundos y ocultarlo automáticamente
+  useEffect(() => {
+    if (lastError) {
+      // Hay un error - mostrarlo
+      setShowError(true)
+
+      // Limpiar timeout anterior si existe
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current)
+      }
+
+      // Establecer nuevo timeout para ocultar después de 10 segundos
+      errorTimeoutRef.current = setTimeout(() => {
+        setShowError(false)
+      }, 10000)
+    }
+  }, [lastError])
+
   const title = useMemo(() => {
     // Preferir track del flujo /next (trae info completa)
     const t = nowPlaying?.track
@@ -140,17 +181,21 @@ export const HostPlayer = () => {
           onReady: (e) => {
             try {
               e.target.setVolume(DEFAULT_VOLUME)
-            } catch {}
+            } catch {
+              console.warn('No se pudo setear volumen al player')
+            }
             resolve(p)
             try {
               e.target.playVideo()
-            } catch {}
+            } catch {
+              console.warn('No se pudo reproducir el video')
+            }
           },
           onStateChange: (e) => {
             const s = e?.data
             if (s === 1)
               setStatus((prev) => (prev === 'recovering' ? 'playing' : prev))
-            if (s === 0) void handleNext({ reason: 'ended' })
+            if (s === 0) void handleNext({ reason: 'ended', forceFinish: true })
           },
           onError: (e) => {
             const code = e?.data
@@ -172,7 +217,11 @@ export const HostPlayer = () => {
                     p.playVideo()
                     return
                   }
-                } catch {}
+                } catch {
+                  console.warn(
+                    'Error intentando saltar video bloqueado en fallback',
+                  )
+                }
               }
 
               setLastError(
@@ -268,14 +317,17 @@ export const HostPlayer = () => {
     }
   }
 
-  async function handleNext({ reason }) {
+  async function handleNext({ reason, forceFinish } = {}) {
     if (busyNextRef.current) return
     busyNextRef.current = true
     setLastError('')
 
     try {
       const res = await jukeboxApi.next({
-        ForceFinishCurrent: Boolean(forceFinishCurrent),
+        ForceFinishCurrent:
+          typeof forceFinish === 'boolean'
+            ? forceFinish
+            : Boolean(forceFinishCurrent),
       })
 
       if (!res.ok) {
@@ -391,7 +443,7 @@ export const HostPlayer = () => {
               <Button
                 onClick={() => {
                   setForceFinishCurrent(true)
-                  handleNext({ reason: 'manual_next_force' })
+                  handleNext({ reason: 'manual_next_force', forceFinish: true })
                 }}
               >
                 Next
@@ -399,7 +451,7 @@ export const HostPlayer = () => {
             </div>
           </div>
 
-          {lastError ? (
+          {showError && lastError ? (
             <div className="mt-3 rounded-2xl bg-red-500/10 p-3 ring-1 ring-red-400/20">
               <div className="text-sm font-semibold text-red-50">Error</div>
               <div className="mt-1 text-sm text-red-50/80">{lastError}</div>
@@ -412,7 +464,13 @@ export const HostPlayer = () => {
       {/* Main: altura fija tipo TV para empatar panel con frame */}
       <div className="mx-auto w-full max-w-[1600px] px-4 py-4 md:px-6">
         {/* En pantallas XL+ fijamos el alto del área principal para que el panel haga scroll interno */}
-        <div className="grid grid-cols-1 gap-4 xl:h-[calc(100vh-140px)] xl:grid-cols-[2.25fr_1fr] xl:items-stretch">
+        <div
+          className={`grid gap-4 xl:h-[calc(100vh-140px)] xl:items-stretch ${
+            showQueuePanel
+              ? 'grid-cols-1 xl:grid-cols-[2.25fr_1fr]'
+              : 'grid-cols-1'
+          }`}
+        >
           {/* Player frame (más ancho) */}
           <div className="relative overflow-hidden rounded-[2rem] bg-black ring-1 ring-white/10 xl:h-full">
             <div className="pointer-events-none absolute inset-0">
@@ -467,77 +525,81 @@ export const HostPlayer = () => {
               {/* Bezel fijo */}
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="text-xs text-white/40">
-                  Idol Café · Host Screen
+                  Desarrollado por Rubén 'Speed' · Host Screen
                 </div>
                 <div className="text-xs text-white/35">
-                  {status === 'playing' ? 'Reproduciendo' : ' '}
+                  Canciones en la lista: {queueItems.length}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Queue panel: misma altura del frame + scroll interno */}
-          <div className="rounded-[2rem] bg-white/[0.03] ring-1 ring-white/10 backdrop-blur xl:h-full">
-            <div className="flex h-full flex-col p-4">
-              {/* Header fijo */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-semibold tracking-wide text-white/80">
-                  🎶 Canciones pedidas
+          {showQueuePanel && (
+            <div className="rounded-[2rem] bg-white/[0.03] ring-1 ring-white/10 backdrop-blur xl:h-full">
+              <div className="flex h-full flex-col p-4">
+                {/* Header fijo */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold tracking-wide text-white/80">
+                    🎶 Canciones pedidas
+                  </div>
+                  <div className="text-xs text-white/45">
+                    {queueItems.length} en la fila
+                  </div>
                 </div>
-                <div className="text-xs text-white/45">
-                  {queueItems.length} en la fila
+
+                {/* Lista scrolleable */}
+                <div className="mt-3 flex-1 overflow-y-auto pr-1">
+                  {queueLoading ? (
+                    <div className="rounded-2xl bg-black/20 p-4 text-sm text-white/60 ring-1 ring-white/10">
+                      Cargando cola…
+                    </div>
+                  ) : queueError ? (
+                    <div className="rounded-2xl bg-red-500/10 p-4 text-sm text-red-50 ring-1 ring-red-400/20">
+                      {queueError}
+                    </div>
+                  ) : queueItems.length === 0 ? (
+                    <div className="rounded-2xl bg-black/20 p-4 text-sm text-white/60 ring-1 ring-white/10">
+                      Aún no hay solicitudes.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {queueItems.map((it, idx) => (
+                        <div
+                          key={
+                            it.id ??
+                            it.QueueId ??
+                            `${it.youtubeVideoId ?? 'q'}-${idx}`
+                          }
+                          className="flex items-center gap-3 rounded-2xl bg-black/20 p-3 ring-1 ring-white/10"
+                        >
+                          <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-xs font-semibold text-white/70 ring-1 ring-white/10">
+                            {idx + 1}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-semibold text-white">
+                              {it.trackName ?? it.TrackName ?? '—'}
+                            </div>
+                            <div className="truncate text-xs text-white/60">
+                              {it.artistName ?? it.ArtistName ?? ''}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              {/* Lista scrolleable */}
-              <div className="mt-3 flex-1 overflow-y-auto pr-1">
-                {queueLoading ? (
-                  <div className="rounded-2xl bg-black/20 p-4 text-sm text-white/60 ring-1 ring-white/10">
-                    Cargando cola…
-                  </div>
-                ) : queueError ? (
-                  <div className="rounded-2xl bg-red-500/10 p-4 text-sm text-red-50 ring-1 ring-red-400/20">
-                    {queueError}
-                  </div>
-                ) : queueItems.length === 0 ? (
-                  <div className="rounded-2xl bg-black/20 p-4 text-sm text-white/60 ring-1 ring-white/10">
-                    Aún no hay solicitudes.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {queueItems.map((it, idx) => (
-                      <div
-                        key={
-                          it.id ??
-                          it.QueueId ??
-                          `${it.youtubeVideoId ?? 'q'}-${idx}`
-                        }
-                        className="flex items-center gap-3 rounded-2xl bg-black/20 p-3 ring-1 ring-white/10"
-                      >
-                        <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-xs font-semibold text-white/70 ring-1 ring-white/10">
-                          {idx + 1}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-white">
-                            {it.trackName ?? it.TrackName ?? '—'}
-                          </div>
-                          <div className="truncate text-xs text-white/60">
-                            {it.artistName ?? it.ArtistName ?? ''}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer fijo (opcional para TV) */}
-              <div className="mt-3 flex items-center justify-between text-[11px] text-white/35">
-                <span>Tip: la lista hace scroll</span>
-                <span className="hidden sm:inline">Backstage</span>
+                {/* Footer fijo (opcional para TV) */}
+                <div className="mt-3 flex items-center justify-between text-[11px] text-white/35">
+                  <span>Desarrollado por Ruben 'Speed'</span>
+                  <span className="hidden sm:inline">
+                    Idol Café · Backstage
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

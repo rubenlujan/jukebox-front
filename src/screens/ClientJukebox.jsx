@@ -8,7 +8,6 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
-import { useToast } from '../components/ui/ToastProvider'
 import { GlassCard } from '../components/ui/GlassCard'
 import { VinylDeck } from '../components/VinylDeck'
 import { useQueuePoll } from '../hooks/useQueuePoll'
@@ -26,8 +25,6 @@ function normalizeTracks(payload) {
 }
 
 export const ClientJukebox = () => {
-  const toast = useToast()
-
   const [requestedBy, setRequestedBy] = useState('')
   const [q, setQ] = useState('')
   const [submittedQ, setSubmittedQ] = useState('')
@@ -552,7 +549,7 @@ export const ClientJukebox = () => {
 
         {confirmState === 'success' ? (
           <div className="space-y-4 text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/90 ring-1 ring-white/30 animate-rock-in">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gray-700 ring-1 ring-gray-400/40 animate-rock-in">
               <img
                 src={rockHand}
                 alt="Rock on"
