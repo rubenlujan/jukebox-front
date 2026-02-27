@@ -114,6 +114,15 @@ export const jukeboxApi = {
     const raw = await apiClient.post('/api/jukebox/recover', {})
     return normalizeRecoverResponse(raw)
   },
+
+  reorder: async ({ queueId, newPosition }) => {
+    const raw = await apiClient.post('/api/jukebox/reorder', {
+      QueueId: queueId,
+      NewPosition: newPosition,
+    })
+    return unwrapEnvelope(raw)
+  },
+
   async getQueue() {
     const raw = await apiClient.get('/api/jukebox/queue')
 

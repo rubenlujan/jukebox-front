@@ -64,6 +64,8 @@ export const apiClient = {
 
   async post(path, body, { query, headers } = {}) {
     const url = buildUrl(path, query)
+    console.log('[API] POST Request:', { url, body })
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -81,6 +83,8 @@ export const apiClient = {
     } catch {
       // non-json
     }
+
+    console.log('[API] POST Response:', json || text)
 
     if (!res.ok) {
       const msg =

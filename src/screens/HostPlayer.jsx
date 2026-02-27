@@ -51,13 +51,7 @@ export const HostPlayer = () => {
   const queueItems = useMemo(() => {
     const arr = Array.isArray(queueRaw) ? queueRaw : []
     // Status=1 es Now Playing → NO se lista a la derecha
-    return arr
-      .filter((x) => x.Status !== 1)
-      .sort(
-        (a, b) =>
-          new Date(a.EnqueuedAtUtc).getTime() -
-          new Date(b.EnqueuedAtUtc).getTime(),
-      )
+    return arr.filter((x) => x.Status !== 1)
   }, [queueRaw])
 
   // ✅ Si estamos en fallback (playlist default) o idle, y entra una petición,

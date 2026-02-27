@@ -96,9 +96,7 @@ export const ClientJukebox = () => {
   }, [queueItems])
 
   const upcoming = useMemo(() => {
-    return (queueItems || [])
-      .filter((x) => x.Status !== 1)
-      .sort((a, b) => (a.QueueId ?? 0) - (b.QueueId ?? 0))
+    return (queueItems || []).filter((x) => x.Status !== 1)
   }, [queueItems])
 
   // ✅ Auto-close SOLO en success
