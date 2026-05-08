@@ -3,6 +3,6 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/rockola/', // 👈 importantísimo
-  // base: '/',
+  //base: '/rockola/', // 👈 importantísimo
+  base: '/',
 })
