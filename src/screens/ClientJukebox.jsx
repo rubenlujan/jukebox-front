@@ -9,7 +9,6 @@ import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
 import { GlassCard } from '../components/ui/GlassCard'
-import { VinylDeck } from '../components/VinylDeck'
 import { useQueuePoll } from '../hooks/useQueuePoll'
 import rockHand from '../assets/rock-hand.png'
 
@@ -222,14 +221,14 @@ export const ClientJukebox = () => {
           <div className="bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-cyan-900/20 px-5 py-4">
             <div className="flex items-center gap-3">
               <img
-                src="https://hrg-it.com/img/logo-backstage.png"
+                src="http://hrg7408-001-site2.jtempurl.com/img/Logo_HD.png"
                 alt="Idol Café"
                 className="h-20 w-20 md:h-12 md:w-12 rounded-full bg-black/40 ring-1 ring-white/20 object-contain p-1"
               />
 
               <div className="min-w-0">
                 <div className="text-xl font-semibold tracking-wide">
-                  Rockola Idol Café
+                  Idol Café Backstage
                 </div>
                 <div className="mt-0.5 text-sm text-white/70">
                   Busca tu rola y agrégala a la lista. Que suene el metal. 🤘
@@ -242,19 +241,9 @@ export const ClientJukebox = () => {
 
           {/* Body */}
           <div className="p-4 md:p-5">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-[420px_1fr] md:items-start">
-              {/* VinylDeck solo en md+ */}
-              <div className="hidden md:block md:col-start-1 md:row-span-3">
-                <VinylDeck
-                  queueLoading={queueLoading}
-                  queueError={queueError}
-                  nowPlaying={nowPlaying}
-                  upcoming={upcoming}
-                />
-              </div>
-
+            <div className="flex flex-col gap-4">
               {/* Buscar + Tip */}
-              <div className="md:col-start-2 md:row-start-1 space-y-4">
+              <div className="space-y-4">
                 <div className="rounded-[26px] bg-white/5 ring-1 ring-white/10 p-4 md:p-5">
                   {' '}
                   <div className="flex items-center justify-between gap-3">
@@ -327,7 +316,7 @@ export const ClientJukebox = () => {
               </div>
 
               {/* Resultados */}
-              <div className="md:col-start-2 md:row-start-2">
+              <div>
                 <div className="rounded-[26px] bg-white/5 ring-1 ring-white/10 p-4 md:p-5">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-semibold tracking-wide text-white/90">
@@ -389,8 +378,8 @@ export const ClientJukebox = () => {
                 </div>
               </div>
 
-              {/* Now Playing (solo mobile) */}
-              <div className="md:hidden">
+              {/* Now Playing */}
+              <div>
                 <div className="rounded-[26px] bg-white/5 ring-1 ring-white/10 p-4">
                   <div className="text-sm font-semibold tracking-wide text-white/90">
                     NOW PLAYING
@@ -426,8 +415,8 @@ export const ClientJukebox = () => {
                 </div>
               </div>
 
-              {/* Lista (solo mobile) */}
-              <div className="md:hidden">
+              {/* Lista */}
+              <div>
                 <div className="rounded-[26px] bg-white/5 ring-1 ring-white/10 p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-semibold text-white tracking-wide">

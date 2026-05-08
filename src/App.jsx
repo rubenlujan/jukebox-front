@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { ClientJukebox } from './screens/ClientJukebox'
 import { HostPlayer } from './screens/HostPlayer'
 import { Admin } from './screens/Admin' // <--- 1. Importar el componente
+import { ClientKPopJukebox } from './screens/ClientKPopJukebox'
 
 export const App = () => {
   return (
@@ -10,6 +11,7 @@ export const App = () => {
       <Route path="/" element={<Navigate to="/host" replace />} />
       <Route path="/client" element={<ClientJukebox />} />
       <Route path="/host" element={<HostPlayer />} />
+      <Route path="/kpop" element={<ClientKPopJukebox />} />
 
       {/* 2. Agregar la nueva ruta */}
       <Route path="/admin" element={<Admin />} />
