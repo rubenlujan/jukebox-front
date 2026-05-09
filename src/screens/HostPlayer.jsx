@@ -401,7 +401,7 @@ export const HostPlayer = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-3">
                 <img
-                  src="http://hrg7408-001-site2.jtempurl.com/img/Logo_HD.png"
+                  src="/img/Logo_HD.png"
                   alt="Idol Café Backstage"
                   className="h-10 w-auto opacity-90"
                   loading="eager"

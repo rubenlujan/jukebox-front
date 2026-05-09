@@ -221,7 +221,7 @@ export const ClientJukebox = () => {
           <div className="bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-cyan-900/20 px-5 py-4">
             <div className="flex items-center gap-3">
               <img
-                src="http://hrg7408-001-site2.jtempurl.com/img/Logo_HD.png"
+                src="/img/Logo_HD.png"
                 alt="Idol Café"
                 className="h-20 w-20 md:h-12 md:w-12 rounded-full bg-black/40 ring-1 ring-white/20 object-contain p-1"
               />
