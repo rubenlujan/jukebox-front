@@ -7,6 +7,7 @@ import { useQueuePoll } from '../hooks/useQueuePoll'
 
 const PLAYER_ELEMENT_ID = 'idol-yt-player'
 const DEFAULT_VOLUME = 80
+const showComplete = false // Cambia a true para ocultar encabezados y maximizar el frame
 
 function safeText(v) {
   return v === null || v === undefined ? '' : String(v)
@@ -35,6 +36,7 @@ export const HostPlayer = () => {
   const previousQueueLengthRef = useRef(0)
   const [showError, setShowError] = useState(false)
   const errorTimeoutRef = useRef(null)
+  const [interactionNeeded, setInteractionNeeded] = useState(true)
 
   // UI listo: conecta aquí /queue luego
   const {
@@ -386,91 +388,125 @@ export const HostPlayer = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const handleStart = () => {
+    setInteractionNeeded(false)
+    if (
+      playerRef.current &&
+      typeof playerRef.current.playVideo === 'function'
+    ) {
+      playerRef.current.playVideo()
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div
+      className={`min-h-screen ${showComplete ? 'bg-black overflow-hidden' : 'bg-zinc-950'}`}
+      onClick={() => {
+        if (interactionNeeded) handleStart()
+      }}
+    >
       {/* Background glow */}
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute -top-32 left-1/2 h-80 w-[900px] -translate-x-1/2 rounded-full bg-fuchsia-500/10 blur-3xl" />
-        <div className="absolute -bottom-24 right-[-120px] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
-      </div>
+      {!showComplete && (
+        <div className="pointer-events-none fixed inset-0">
+          <div className="absolute -top-32 left-1/2 h-80 w-[900px] -translate-x-1/2 rounded-full bg-fuchsia-500/10 blur-3xl" />
+          <div className="absolute -bottom-24 right-[-120px] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
+        </div>
+      )}
 
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur">
-        <div className="mx-auto w-full max-w-[1600px] px-4 py-4 md:px-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <img
-                  src="/img/Logo_HD.png"
-                  alt="Idol Café Backstage"
-                  className="h-10 w-auto opacity-90"
-                  loading="eager"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="min-w-0">
-                  <div className="text-lg font-semibold text-white">
-                    Idol Café Backstage
-                  </div>
+      {!showComplete && (
+        <div className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur">
+          <div className="mx-auto w-full max-w-[1600px] px-4 py-4 md:px-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/img/Logo_HD.png"
+                    alt="Idol Café Backstage"
+                    className="h-10 w-auto opacity-90"
+                    loading="eager"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="min-w-0">
+                    <div className="text-lg font-semibold text-white">
+                      Idol Café Backstage
+                    </div>
 
-                  {/* Now Playing debajo del logo (compacto) */}
-                  <div className="mt-0.5 truncate text-sm text-white/75">
-                    <span className="text-white/55">Now Playing:</span>{' '}
-                    <span className="font-semibold text-white">
-                      {title ||
-                        (status === 'idle' ? 'Esperando solicitudes…' : '—')}
-                    </span>
-                    {status === 'fallback' ? (
-                      <span className="ml-2 rounded-full bg-amber-400/10 px-2 py-0.5 text-[11px] text-amber-100 ring-1 ring-amber-300/20">
-                        fallback
+                    {/* Now Playing debajo del logo (compacto) */}
+                    <div className="mt-0.5 truncate text-sm text-white/75">
+                      <span className="text-white/55">Now Playing:</span>{' '}
+                      <span className="font-semibold text-white">
+                        {title ||
+                          (status === 'idle' ? 'Esperando solicitudes…' : '—')}
                       </span>
-                    ) : null}
+                      {status === 'fallback' ? (
+                        <span className="ml-2 rounded-full bg-amber-400/10 px-2 py-0.5 text-[11px] text-amber-100 ring-1 ring-amber-300/20">
+                          fallback
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Controles host */}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" onClick={() => handleRecover()}>
+                  Recover
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setForceFinishCurrent(true)
+                    handleNext({
+                      reason: 'manual_next_force',
+                      forceFinish: true,
+                    })
+                  }}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
 
-            {/* Controles host */}
-            <div className="flex flex-wrap gap-2">
-              <Button variant="ghost" onClick={() => handleRecover()}>
-                Recover
-              </Button>
-
-              <Button
-                onClick={() => {
-                  setForceFinishCurrent(true)
-                  handleNext({ reason: 'manual_next_force', forceFinish: true })
-                }}
-              >
-                Next
-              </Button>
-            </div>
+            {showError && lastError ? (
+              <div className="mt-3 rounded-2xl bg-red-500/10 p-3 ring-1 ring-red-400/20">
+                <div className="text-sm font-semibold text-red-50">Error</div>
+                <div className="mt-1 text-sm text-red-50/80">{lastError}</div>
+              </div>
+            ) : null}
           </div>
-
-          {showError && lastError ? (
-            <div className="mt-3 rounded-2xl bg-red-500/10 p-3 ring-1 ring-red-400/20">
-              <div className="text-sm font-semibold text-red-50">Error</div>
-              <div className="mt-1 text-sm text-red-50/80">{lastError}</div>
-            </div>
-          ) : null}
+          <div className="h-px w-full bg-white/10" />
         </div>
-        <div className="h-px w-full bg-white/10" />
-      </div>
+      )}
 
       {/* Main: altura fija tipo TV para empatar panel con frame */}
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-4 md:px-6">
+      <div
+        className={
+          showComplete
+            ? 'h-screen w-screen overflow-hidden bg-black'
+            : 'mx-auto w-full max-w-[1600px] px-4 py-4 md:px-6'
+        }
+      >
         {/* En pantallas XL+ fijamos el alto del área principal para que el panel haga scroll interno */}
         <div
-          className={`grid gap-4 xl:h-[calc(100vh-140px)] xl:items-stretch ${
+          className={`grid xl:items-stretch ${
+            showComplete ? 'h-full gap-0' : 'gap-4 xl:h-[calc(100vh-140px)]'
+          } ${
             showQueuePanel
               ? 'grid-cols-1 xl:grid-cols-[2.25fr_1fr]'
               : 'grid-cols-1'
           }`}
         >
           {/* Player frame (más ancho) */}
-          <div className="relative overflow-hidden rounded-[2rem] bg-black ring-1 ring-white/10 xl:h-full">
+          <div
+            className={`relative overflow-hidden bg-black xl:h-full ${showComplete ? '' : 'rounded-[2rem] ring-1 ring-white/10'}`}
+          >
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute inset-0 bg-gradient-to-tr from-fuchsia-500/12 via-transparent to-cyan-500/10" />
-              <div className="absolute inset-0 ring-1 ring-inset ring-white/10" />
+              {!showComplete && (
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/10" />
+              )}
               <div className="absolute -left-24 top-10 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl" />
             </div>
 
@@ -518,20 +554,24 @@ export const HostPlayer = () => {
               </div>
 
               {/* Bezel fijo */}
-              <div className="flex items-center justify-between px-4 py-3">
-                <div className="text-xs text-white/40">
-                  Desarrollado por Rubén 'Speed' · Host Screen
+              {!showComplete && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="text-xs text-white/40">
+                    Desarrollado por Rubén 'Speed' · Host Screen
+                  </div>
+                  <div className="text-xs text-white/35">
+                    Canciones en la lista: {queueItems.length}
+                  </div>
                 </div>
-                <div className="text-xs text-white/35">
-                  Canciones en la lista: {queueItems.length}
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
           {/* Queue panel: misma altura del frame + scroll interno */}
           {showQueuePanel && (
-            <div className="rounded-[2rem] bg-white/[0.03] ring-1 ring-white/10 backdrop-blur xl:h-full">
+            <div
+              className={`backdrop-blur xl:h-full ${showComplete ? 'bg-zinc-950/95 border-l border-white/10' : 'rounded-[2rem] bg-white/[0.03] ring-1 ring-white/10'}`}
+            >
               <div className="flex h-full flex-col p-4">
                 {/* Header fijo */}
                 <div className="flex items-center justify-between gap-3">
@@ -597,6 +637,24 @@ export const HostPlayer = () => {
           )}
         </div>
       </div>
+
+      {/* Overlay de interacción requerida por navegadores para auto-play con audio */}
+      {interactionNeeded && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 cursor-pointer backdrop-blur-sm transition-opacity"
+          onClick={handleStart}
+        >
+          <div className="rounded-3xl bg-zinc-900/80 px-10 py-8 text-center ring-1 ring-white/20 shadow-2xl">
+            <div className="text-5xl mb-4">🎵</div>
+            <div className="text-2xl font-bold text-white mb-2">
+              Iniciar Rockola
+            </div>
+            <div className="text-base text-white/70">
+              Haz clic en cualquier parte para permitir el audio
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
