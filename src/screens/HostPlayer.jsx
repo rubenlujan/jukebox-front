@@ -7,7 +7,7 @@ import { useQueuePoll } from '../hooks/useQueuePoll'
 
 const PLAYER_ELEMENT_ID = 'idol-yt-player'
 const DEFAULT_VOLUME = 80
-const showComplete = false // Cambia a true para ocultar encabezados y maximizar el frame
+const showComplete = true // Cambia a true para ocultar encabezados y maximizar el frame
 
 function safeText(v) {
   return v === null || v === undefined ? '' : String(v)
@@ -227,7 +227,18 @@ export const HostPlayer = () => {
               return
             }
 
-            setLastError(`YouTube error code: ${code} (embed/restricción).`)
+            setLastError(
+              `YouTube error code: ${code} (embed/restricción). Saltando automáticamente...`,
+            )
+            setForceFinishCurrent(true)
+
+            // Saltamos automáticamente después de 3 segundos
+            setTimeout(() => {
+              void handleNext({
+                reason: `youtube_error_${code}`,
+                forceFinish: true,
+              })
+            }, 3000)
           },
         },
       })
@@ -263,8 +274,16 @@ export const HostPlayer = () => {
     try {
       player.loadVideoById(videoId)
     } catch (err) {
-      setLastError(err?.message || 'No se pudo reproducir el video.')
+      setLastError(
+        (err?.message || 'No se pudo reproducir el video.') +
+          ' Saltando automáticamente...',
+      )
       setStatus('error')
+      setForceFinishCurrent(true)
+
+      setTimeout(() => {
+        void handleNext({ reason: 'player_load_error', forceFinish: true })
+      }, 3000)
     }
   }
 
