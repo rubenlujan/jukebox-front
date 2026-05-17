@@ -14,6 +14,7 @@ export const Admin = () => {
   } = useQueuePoll({ intervalMs: 3000 })
 
   const [processingId, setProcessingId] = useState(null)
+  const [isNexting, setIsNexting] = useState(false)
   const [actionError, setActionError] = useState('')
 
   const nowPlaying = useMemo(() => {
@@ -62,6 +63,28 @@ export const Admin = () => {
     }
   }
 
+  const handleNext = async () => {
+    if (isNexting) return
+    setIsNexting(true)
+    setActionError('')
+
+    try {
+      const res = await jukeboxApi.next({ ForceFinishCurrent: true })
+      if (!res.ok) {
+        setActionError(
+          res.message || 'No se pudo saltar a la siguiente canción.',
+        )
+      } else {
+        // Refetch inmediato para actualizar la UI
+        refetch()
+      }
+    } catch (err) {
+      setActionError(err?.message || 'Error de conexión.')
+    } finally {
+      setIsNexting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Background glow similar a ClientJukebox */}
@@ -88,7 +111,19 @@ export const Admin = () => {
                   </div>
                 </div>
               </div>
-              {loading && <Spinner className="text-white/50" />}
+              <div className="flex items-center gap-3">
+                {loading && <Spinner className="text-white/50" />}
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={
+                    isNexting || (!nowPlaying && queueItems.length === 0)
+                  }
+                  className="flex h-9 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/20 active:scale-95 disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  {isNexting ? <Spinner className="h-4 w-4" /> : 'Siguiente ⏭'}
+                </button>
+              </div>
             </div>
           </div>
 

@@ -124,6 +124,36 @@ export const HostPlayer = () => {
     }
   }, [lastError])
 
+  // ✅ Detectar si el Admin saltó la canción forzosamente desde el panel
+  useEffect(() => {
+    if (status === 'init' || status === 'recovering' || busyNextRef.current)
+      return
+
+    const localId = nowPlaying?.track?.QueueId
+    const backendId = queueNowPlaying?.QueueId
+
+    // 1. El backend avanzó a una canción más nueva (el Admin le dio "Next")
+    if (backendId && localId && backendId > localId) {
+      console.log(
+        'Host detectó un salto forzado en el backend. Resincronizando...',
+      )
+      void handleRecover()
+      return
+    }
+
+    // 2. Estábamos tocando una canción, pero el backend dice que la cola está vacía
+    if (localId && !backendId) {
+      const stillInQueue = queueItems.some((x) => x.QueueId === localId)
+      if (!stillInQueue) {
+        console.log(
+          'Host detectó que se vació la cola en el backend. Resincronizando...',
+        )
+        void handleRecover()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queueNowPlaying, queueItems, nowPlaying, status])
+
   const title = useMemo(() => {
     // Preferir track del flujo /next (trae info completa)
     const t = nowPlaying?.track
@@ -178,8 +208,13 @@ export const HostPlayer = () => {
           onReady: (e) => {
             try {
               e.target.setVolume(DEFAULT_VOLUME)
+
+              // Activar el modo aleatorio si se cargó un playlist (fallback)
+              if (listId && typeof e.target.setShuffle === 'function') {
+                e.target.setShuffle(true)
+              }
             } catch {
-              console.warn('No se pudo setear volumen al player')
+              console.warn('No se pudo configurar volumen o shuffle al player')
             }
             resolve(p)
             try {
@@ -321,7 +356,10 @@ export const HostPlayer = () => {
       }
 
       if (res.hasNowPlaying && res.youtubeVideoId) {
-        setNowPlaying({ youtubeVideoId: res.youtubeVideoId, track: null })
+        setNowPlaying({
+          youtubeVideoId: res.youtubeVideoId,
+          track: res.nowPlaying,
+        })
         await playVideoId(res.youtubeVideoId)
         return
       }
@@ -359,6 +397,7 @@ export const HostPlayer = () => {
               ArtistName: res.track.ArtistName,
               DurationMs: res.track.DurationMs,
               AlbumImageUrl: res.track.AlbumImageUrl,
+              QueueId: res.track.QueueId,
             }
           : null
 

@@ -95,11 +95,16 @@ function normalizeNextResponse(payload) {
 
 export const jukeboxApi = {
   requestTrack: async ({ DeezerTrackId, TableCode, RequestedBy }) => {
-    const raw = await apiClient.post('/api/jukebox/request', {
+    const payload = {
       DeezerTrackId,
       TableCode,
       RequestedBy,
-    })
+    }
+    console.log(
+      'JSON enviado en requestTrack:',
+      JSON.stringify(payload, null, 2),
+    )
+    const raw = await apiClient.post('/api/jukebox/request', payload)
     return normalizeRequestResponse(raw)
   },
 
