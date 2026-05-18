@@ -366,7 +366,12 @@ export const HostPlayer = () => {
 
       await handleNext({ reason: 'recover_no_nowplaying' })
     } catch (err) {
-      setLastError(err?.message || 'Error al recuperar estado del host.')
+      const errMsg =
+        err?.details?.Message ||
+        err?.details?.message ||
+        err?.message ||
+        'Error al recuperar estado del host.'
+      setLastError(errMsg)
       setStatus('error')
     }
   }
@@ -414,9 +419,12 @@ export const HostPlayer = () => {
         setStatus('idle')
       }
     } catch (err) {
-      setLastError(
-        err?.message || `Error al pedir siguiente (${safeText(reason)})`,
-      )
+      const errMsg =
+        err?.details?.Message ||
+        err?.details?.message ||
+        err?.message ||
+        `Error al pedir siguiente (${safeText(reason)})`
+      setLastError(errMsg)
       setStatus('error')
     } finally {
       busyNextRef.current = false

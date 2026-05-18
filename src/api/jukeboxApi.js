@@ -104,32 +104,69 @@ export const jukeboxApi = {
       'JSON enviado en requestTrack:',
       JSON.stringify(payload, null, 2),
     )
-    const raw = await apiClient.post('/api/jukebox/request', payload)
-    return normalizeRequestResponse(raw)
+    try {
+      const raw = await apiClient.post('/api/jukebox/request', payload)
+      return normalizeRequestResponse(raw)
+    } catch (err) {
+      if (err.details && typeof err.details === 'object') {
+        return normalizeRequestResponse(err.details)
+      }
+      throw err
+    }
   },
 
   next: async ({ ForceFinishCurrent }) => {
-    const raw = await apiClient.post('/api/jukebox/next', {
-      ForceFinishCurrent,
-    })
-    return normalizeNextResponse(raw)
+    try {
+      const raw = await apiClient.post('/api/jukebox/next', {
+        ForceFinishCurrent,
+      })
+      return normalizeNextResponse(raw)
+    } catch (err) {
+      if (err.details && typeof err.details === 'object') {
+        return normalizeNextResponse(err.details)
+      }
+      throw err
+    }
   },
 
   recover: async () => {
-    const raw = await apiClient.post('/api/jukebox/recover', {})
-    return normalizeRecoverResponse(raw)
+    try {
+      const raw = await apiClient.post('/api/jukebox/recover', {})
+      return normalizeRecoverResponse(raw)
+    } catch (err) {
+      if (err.details && typeof err.details === 'object') {
+        return normalizeRecoverResponse(err.details)
+      }
+      throw err
+    }
   },
 
   reorder: async ({ queueId, newPosition }) => {
-    const raw = await apiClient.post('/api/jukebox/reorder', {
-      QueueId: queueId,
-      NewPosition: newPosition,
-    })
-    return unwrapEnvelope(raw)
+    try {
+      const raw = await apiClient.post('/api/jukebox/reorder', {
+        QueueId: queueId,
+        NewPosition: newPosition,
+      })
+      return unwrapEnvelope(raw)
+    } catch (err) {
+      if (err.details && typeof err.details === 'object') {
+        return unwrapEnvelope(err.details)
+      }
+      throw err
+    }
   },
 
   async getQueue() {
-    const raw = await apiClient.get('/api/jukebox/queue')
+    let raw
+    try {
+      raw = await apiClient.get('/api/jukebox/queue')
+    } catch (err) {
+      if (err.details && typeof err.details === 'object') {
+        raw = err.details
+      } else {
+        throw err
+      }
+    }
 
     const ok = raw?.Ok ?? raw?.ok ?? false
     const message = raw?.Message ?? raw?.message ?? null

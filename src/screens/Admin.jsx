@@ -57,7 +57,12 @@ export const Admin = () => {
         refetch()
       }
     } catch (err) {
-      setActionError(err?.message || 'Error de conexión.')
+      const errMsg =
+        err?.details?.Message ||
+        err?.details?.message ||
+        err?.message ||
+        'Error de conexión.'
+      setActionError(errMsg)
     } finally {
       setProcessingId(null)
     }
@@ -79,7 +84,12 @@ export const Admin = () => {
         refetch()
       }
     } catch (err) {
-      setActionError(err?.message || 'Error de conexión.')
+      const errMsg =
+        err?.details?.Message ||
+        err?.details?.message ||
+        err?.message ||
+        'Error de conexión.'
+      setActionError(errMsg)
     } finally {
       setIsNexting(false)
     }

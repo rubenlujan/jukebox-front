@@ -193,7 +193,12 @@ export const ClientJukebox = () => {
       setConfirmState('success')
     } catch (err) {
       // ❌ Error de red/servidor → mostrar en MODAL (no toast)
-      setModalErrorMsg(err?.message || 'No se pudo enviar la solicitud.')
+      const errMsg =
+        err?.details?.Message ||
+        err?.details?.message ||
+        err?.message ||
+        'No se pudo enviar la solicitud.'
+      setModalErrorMsg(errMsg)
       setConfirmState('error')
     } finally {
       setSubmitting(false)

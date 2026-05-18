@@ -192,7 +192,12 @@ export const ClientKPopJukebox = () => {
       setSuccessMsg(msg)
       setConfirmState('success')
     } catch (err) {
-      setModalErrorMsg(err?.message || 'No se pudo enviar la solicitud.')
+      const errMsg =
+        err?.details?.Message ||
+        err?.details?.message ||
+        err?.message ||
+        'No se pudo enviar la solicitud.'
+      setModalErrorMsg(errMsg)
       setConfirmState('error')
     } finally {
       setSubmitting(false)
