@@ -137,8 +137,19 @@ export const ClientKPopJukebox = () => {
           q: submittedQ.trim(),
           limit,
         })
-        const list = normalizeTracks(res)
-        if (reqIdRef.current === myReqId) setTracks(list)
+
+        if (reqIdRef.current === myReqId) {
+          const isOk = res?.Ok ?? res?.ok ?? true
+          if (!isOk) {
+            setTracks([])
+            setErrorMsg(
+              res?.Message ?? res?.message ?? 'Error al buscar en Deezer.',
+            )
+          } else {
+            const list = normalizeTracks(res)
+            setTracks(list)
+          }
+        }
       } catch (err) {
         if (reqIdRef.current === myReqId) {
           setTracks([])
